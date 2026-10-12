@@ -1,5 +1,17 @@
 # Onlyboxes
 
+## Kubernetes execution backend
+
+This fork adds [`worker-kubernetes`](worker/worker-kubernetes/README.md), which
+registers with the existing Console and schedules ephemeral sandbox Pods through
+the Kubernetes API. It supports terminal sessions, Python execution, file reads,
+exports, lease renewal and restart recovery without a Docker socket.
+
+The [kind development harness](scripts/README.md#kind-development-contract-tests)
+deploys the development Console and Worker and exercises the existing REST/MCP
+contracts. Deployment, RBAC and sandbox NetworkPolicy examples are included in
+`worker/worker-kubernetes/deploy/`.
+
 [简体中文](docs/README.zh-CN.md)
 
 Onlyboxes is a self-hosted code execution sandbox platform for individuals and small teams.

@@ -59,11 +59,13 @@ func main() {
 		slog.Info("initial admin bootstrap env ignored because persisted admin account exists")
 	}
 	if adminAccount.InitializedNow {
-		attrs := []any{
-			"username", adminAccount.Username,
-			"password", adminAccount.PasswordPlaintext,
+		attrs := []any{"username", adminAccount.Username}
+		// Automated deployments supply bootstrap credentials through a secret
+		// manager and can suppress the one-time interactive credential output.
+		if os.Getenv("CONSOLE_LOG_BOOTSTRAP_CREDENTIALS") != "false" {
+			attrs = append(attrs, "password", adminAccount.PasswordPlaintext)
 		}
-		if adminAccount.APIKeyInitialized {
+		if adminAccount.APIKeyInitialized && os.Getenv("CONSOLE_LOG_BOOTSTRAP_CREDENTIALS") != "false" {
 			attrs = append(
 				attrs,
 				"api_key_name", adminAccount.APIKeyName,
