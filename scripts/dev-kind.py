@@ -115,6 +115,8 @@ class Harness:
             spec["serviceAccountName"] = service_account
         else:
             spec["automountServiceAccountToken"] = False
+        if name == "upload":
+            container["readinessProbe"] = {"httpGet": {"path": "/", "port": 8080}, "periodSeconds": 1}
         if name == "console":
             spec["volumes"] = [{"name": "db", "persistentVolumeClaim": {"claimName": "console-db"}}]
             container["volumeMounts"] = [{"name": "db", "mountPath": "/db"}]
@@ -195,7 +197,7 @@ class Harness:
         print("PASS: Console and Kubernetes Worker deployed and registered", flush=True)
 
     def contract(self):
-        echo = self.request("/api/v1/commands/echo", {"message": "contract"}, True)
+        echo = wait(lambda: self.request("/api/v1/commands/echo", {"message": "contract"}, True))
         assert echo.get("message") == "contract"
         terminal = self.request("/api/v1/commands/terminal", {"command": "printf retained > /workspace/state; printf ok; printf diagnostic >&2; exit 7"}, True)
         assert terminal["stdout"] == "ok" and terminal["stderr"] == "diagnostic" and terminal["exit_code"] == 7
@@ -252,6 +254,9 @@ HTTPServer(('0.0.0.0',8080), Handler).serve_forever()
                    {"apiVersion": "v1", "kind": "Service", "metadata": {"name": "upload", "namespace": NS},
                     "spec": {"selector": {"app": "upload"}, "ports": [{"port": 8080}]}})
         run(self.kubectl + ["rollout", "status", "deployment/upload", "-n", NS, "--timeout=120s"])
+        # Deployment readiness can precede Service endpoint propagation.
+        wait(lambda: self.request("/api/v1/commands/terminal", {"session_id": sid,
+                    "command": "python3 -c \"import urllib.request; assert urllib.request.urlopen('http://upload:8080',timeout=2).status == 200\""}, True)["exit_code"] == 0)
         exported = self.request("/api/v1/tasks", {"capability": "terminalResource", "mode": "sync", "timeout_ms": 60000,
                      "input": {"session_id": sid, "file_path": "/workspace/state", "action": "export",
                                "signed_url": "http://upload:8080/upload", "headers": {"x-amz-meta-contract": "verified"}}}, True)

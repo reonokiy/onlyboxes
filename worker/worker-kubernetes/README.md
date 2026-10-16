@@ -62,3 +62,16 @@ Run `go test -race ./...` in this module. The opt-in real Kubernetes test requir
 `ONLYBOXES_KIND_KUBECONFIG` and `ONLYBOXES_KIND_NAMESPACE` pointing to a dedicated
 local kind cluster and test namespace. It verifies command streams and exit codes,
 session persistence, file reads and timeout cleanup.
+
+## Fork container image
+
+The fork's `Kubernetes image` workflow publishes Console and Worker together as
+`ghcr.io/reonokiy/onlyboxes:kubernetes-<git-sha>`. OCI source metadata links the
+package to this repository. The default entrypoint is `/worker`; use command
+`/console` for the control service. Both run as UID 1000 and require no shell.
+
+Build it with `docker build -f docker/kubernetes.dockerfile .`. Each build runs
+the Console and Kubernetes Worker module tests. Pin the published image digest
+in production. The package must allow public anonymous pulls before deploying
+without a registry credential; GitHub package visibility is configured in its
+package settings.
