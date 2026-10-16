@@ -1,5 +1,28 @@
 # scripts
 
+## kind development contract tests
+
+`scripts/dev.sh kind-test --kubeconfig <kind-config> --binary-dir <linux-binaries>`
+starts the Kubernetes integration suite in the background and returns immediately.
+Read `scripts/.dev/kind-test.log` for sanitized pass/fail summaries. The binary
+directory must contain freshly built `console` and `worker-kubernetes` executables.
+Build each module with `CGO_ENABLED=0 go build -o <binary-path> ./cmd/<name>`.
+
+Create a dedicated cluster first with
+`kind create cluster --name onlyboxes-dev --config worker/worker-kubernetes/deploy/kind.yaml --kubeconfig <kind-config>`.
+The custom network ranges avoid common address conflicts when Docker runs inside
+another Kubernetes environment. The test harness
+loads a development image, replaces only its `onlyboxes-kind-dev` namespace and
+`onlyboxes-kind-db` test PV, deploys Console and Worker, then checks REST, MCP and
+restart recovery. It leaves the development Deployments available for inspection.
+Delete the dedicated kind cluster when done. Do not point this harness at a
+production cluster. Registration credentials stay in memory and local Kubernetes
+Secrets; they are never printed or written into repository files.
+
+The kind Console uses `CONSOLE_LOG_BOOTSTRAP_CREDENTIALS=false` to suppress its
+one-time credential output. This option leaves interactive bootstrap behavior
+unchanged when omitted.
+
 ## dev.sh — 本地开发进程编排
 
 统一管理 tmux 中的 console / web / website、本地 Worker，以及公共预览 Nginx 容器和 Docker 网络。所有子命令都立即返回。

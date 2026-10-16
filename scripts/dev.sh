@@ -527,6 +527,12 @@ main() {
         status) cmd_status "$@" ;;
         logs) cmd_logs "$@" ;;
         creds) cmd_creds "$@" ;;
+        kind-test)
+            mkdir -p "$LOG_DIR"
+            setsid nohup python3 "$SCRIPT_DIR/dev-kind.py" "$@" >"$LOG_DIR/kind-test.log" 2>&1 < /dev/null &
+            echo "$!" >"$LOG_DIR/kind-test.pid"
+            echo "kind contract test started; results: $LOG_DIR/kind-test.log"
+            ;;
         "" | -h | --help | help) usage ;;
         *) die "未知命令 '$cmd'（执行 scripts/dev.sh --help 查看用法）" ;;
     esac

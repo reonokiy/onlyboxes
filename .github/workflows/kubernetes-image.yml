@@ -1,0 +1,47 @@
+name: Kubernetes image
+on:
+  pull_request:
+    paths:
+      - api/**
+      - console/**
+      - worker/worker-kubernetes/**
+      - docker/kubernetes.dockerfile
+      - .github/workflows/kubernetes-image.yml
+  push:
+    branches: [main]
+    paths:
+      - api/**
+      - console/**
+      - worker/worker-kubernetes/**
+      - docker/kubernetes.dockerfile
+      - .github/workflows/kubernetes-image.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: kubernetes-image-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+      - name: Test and build Console and Kubernetes Worker
+        run: docker build --build-arg SOURCE_REVISION="$GITHUB_SHA" -f docker/kubernetes.dockerfile -t onlyboxes-kubernetes:test .
+      - name: Publish the tested fork image
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+          GHCR_USER: ${{ github.actor }}
+        run: |
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GHCR_USER" --password-stdin
+          trap 'docker logout ghcr.io >/dev/null 2>&1' EXIT
+          image="ghcr.io/reonokiy/onlyboxes:kubernetes-${GITHUB_SHA}"
+          docker tag onlyboxes-kubernetes:test "$image"
+          docker push "$image"
